@@ -5,6 +5,10 @@ const pool = require('./db');
 
 app.use(express.json());
 
+app.get('/', (req, res) => {
+  res.send('DigiHealth');
+});
+
 app.get('/api/db-test', async (req, res) => {
   try {
     const result = await pool.query('SELECT NOW() AS TIME');
