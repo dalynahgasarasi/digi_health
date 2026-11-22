@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DigiHealth</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 420px; margin: 30px auto; padding: 0 16px; }
+    input, select, button { width: 100%; padding: 10px; margin: 6px 0; box-sizing: border-box; }
+    button { background: #0a7d5a; color: white; border: 0; cursor: pointer; }
+    .msg { margin: 10px 0; font-weight: bold; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h1>DigiHealth</h1>
+  <div class="msg" id="msg"></div>
+
+  <div id="loginBox">
+    <h2>Log in</h2>
+    <input id="lPhone" placeholder="Phone number">
+    <input id="lPass" type="password" placeholder="Password">
+    <button onclick="login()">Log in</button>
+    <p>No account? <a href="#" onclick="show('signup')">Sign up</a></p>
+  </div>
+
+  <div id="signupBox" class="hidden">
+    <h2>Create account</h2>
+    <input id="sName" placeholder="Name">
+    <input id="sPhone" placeholder="Phone number">
+    <input id="sPass" type="password" placeholder="Password (8+ characters)">
+    <select id="sRole" onchange="roleChange()">
+      <option value="patient">Patient</option>
+      <option value="chw">Community health worker</option>
+      <option value="doctor">Doctor</option>
+    </select>
+    <input id="sLocation" placeholder="Location (village or district)">
+    <input id="sSpec" class="hidden" placeholder="Specialisation">
+    <select id="sLang">
+      <option>Kinyarwanda</option>
+      <option>English</option>
+      <option>French</option>
+    </select>
+    <button onclick="signup()">Sign up</button>
+    <p>Have an account? <a href="#" onclick="show('login')">Log in</a></p>
+  </div>
+
+  <script>
+    function show(which) {
+      document.getElementById('loginBox').classList.toggle('hidden', which !== 'login');
+      document.getElementById('signupBox').classList.toggle('hidden', which !== 'signup');
+      document.getElementById('msg').textContent = '';
+    }
+    function roleChange() {
+      const role = document.getElementById('sRole').value;
+      document.getElementById('sSpec').classList.toggle('hidden', role !== 'doctor');
+    }
+    async function signup() {
+      const body = {
+        username: document.getElementById('sName').value,
+        phone_number: document.getElementById('sPhone').value,
+        password: document.getElementById('sPass').value,
+        role: document.getElementById('sRole').value,
+        location: document.getElementById('sLocation').value,
+        specialisation: document.getElementById('sSpec').value,
+        language: document.getElementById('sLang').value
+      };
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      document.getElementById('msg').textContent = data.message || data.error;
+      if (res.ok) show('login');
+    }
+    async function login() {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone_number: document.getElementById('lPhone').value,
+          password: document.getElementById('lPass').value
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        document.getElementById('msg').textContent = data.message || data.error;
+        return;
+      }
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      window.location.href = '/dashboard.html';
+    }
+  </script>
+</body>
+</html>

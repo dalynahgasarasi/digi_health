@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DigiHealth Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 30px auto; padding: 0 16px; }
+    button { padding: 10px 16px; background: #0a7d5a; color: white; border: 0; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1 id="welcome"></h1>
+  <p id="roleInfo"></p>
+  <button onclick="logout()">Log out</button>
+
+  <script>
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    if (!user) {
+      window.location.href = '/';
+    } else {
+      const names = { patient: 'Patient', chw: 'Community health worker', doctor: 'Doctor' };
+      document.getElementById('welcome').textContent = 'Welcome, ' + user.username;
+      document.getElementById('roleInfo').textContent = 'Signed in as: ' + names[user.role];
+    }
+    function logout() {
+      localStorage.clear();
+      window.location.href = '/';
+    }
+  </script>
+</body>
+</html>
