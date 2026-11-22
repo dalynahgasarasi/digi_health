@@ -1,17 +1,18 @@
+require('dotenv').config();
 const express = require('express');
+const pool = require('./db');
+const { router: authRouter } = require('./auth');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
-const pool = require('./db');
 
 app.use(express.json());
-
-app.get('/', (req, res) => {
-  res.send('DigiHealth');
-});
+app.use(express.static('public'));
+app.use('/api/auth', authRouter);
 
 app.get('/api/db-test', async (req, res) => {
   try {
-    const result = await pool.query('SELECT NOW() AS TIME');
+    const result = await pool.query('SELECT NOW() AS time');
     res.json({ OK: true, time: result.rows[0].time });
   } catch (error) {
     console.error(error);
