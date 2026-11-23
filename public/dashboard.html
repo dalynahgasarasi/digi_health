@@ -54,36 +54,90 @@
       <h2>My appointments</h2>
       <div id="pAppts"></div>
     </section>
+        <section>
+      <h2>Request a remote consultation</h2>
+      <textarea id="pConsultDesc" rows="3" placeholder="Why do you need a consultation?"></textarea>
+      <button onclick="patientRequestConsult()">Request consultation</button>
+      <div class="msg" id="pConsultMsg"></div>
+    </section>
+    <section>
+      <h2>My consultations</h2>
+      <div id="pConsults"></div>
+    </section>
+    <section>
+      <h2>Talk to my nearest CHW</h2>
+      <button onclick="requestChw()">Ask my nearest community health worker</button>
+      <div class="msg" id="pChwMsg"></div>
+      <div id="pChwReqs"></div>
+    </section>
+    <section>
+      <h2>My prescriptions</h2>
+      <div id="pRx"></div>
+    </section>
   </div>
 
-  <!-- CHW AND DOCTOR -->
+
   <div id="staffView" class="hidden">
     <section>
       <h2>Patients</h2>
       <select id="sPatient"></select>
       <button class="small" onclick="viewHistory()">View symptom history</button>
+      <button class="small" onclick="viewRx()">View prescriptions</button>
       <div id="sHistory"></div>
+      <div id="sRx"></div>
     </section>
-    <section id="chwOnly" class="hidden">
-      <h2>Log symptoms for the selected patient</h2>
-      <textarea id="cSymptom" rows="3" placeholder="Describe the patient's symptoms"></textarea>
-      <select id="cUrgency">
-        <option value="normal">Normal</option>
-        <option value="urgent">Urgent</option>
-      </select>
-      <button onclick="chwSubmitSymptom()">Submit symptoms</button>
-      <div class="msg" id="cMsg"></div>
-    </section>
+
+    <div id="chwOnly" class="hidden">
+      <section>
+        <h2>Log symptoms for the selected patient</h2>
+        <textarea id="cSymptom" rows="3" placeholder="Describe the patient's symptoms"></textarea>
+        <select id="cUrgency">
+          <option value="normal">Normal</option>
+          <option value="urgent">Urgent</option>
+        </select>
+        <button onclick="chwSubmitSymptom()">Submit symptoms</button>
+        <div class="msg" id="cMsg"></div>
+      </section>
+      <section>
+        <h2>Request a consultation for the selected patient</h2>
+        <textarea id="cConsultDesc" rows="3" placeholder="Why does this patient need a doctor?"></textarea>
+        <button onclick="chwRequestConsult()">Request consultation</button>
+        <div class="msg" id="cConsultMsg"></div>
+      </section>
+      <section>
+        <h2>Consultations I requested</h2>
+        <div id="cConsults"></div>
+      </section>
+      <section>
+        <h2>Patients asking for a CHW</h2>
+        <div class="msg" id="cChwMsg"></div>
+        <div id="cChwReqs"></div>
+      </section>
+    </div>
+
     <section>
       <h2>Recent symptoms from all patients</h2>
       <div id="sRecent"></div>
     </section>
-    <section id="docOnly" class="hidden">
-      <h2>My appointments</h2>
-      <div id="dAppts"></div>
-    </section>
-  </div>
 
+    <div id="docOnly" class="hidden">
+      <section>
+        <h2>My appointments</h2>
+        <div id="dAppts"></div>
+      </section>
+      <section>
+        <h2>Consultation requests</h2>
+        <div class="msg" id="dConsultMsg"></div>
+        <div id="dConsults"></div>
+      </section>
+      <section>
+        <h2>Write a prescription for the selected patient</h2>
+        <textarea id="dRx" rows="3" placeholder="Medicine, dose and instructions"></textarea>
+        <button onclick="writeRx()">Save prescription</button>
+        <div class="msg" id="dRxMsg"></div>
+      </section>
+    </div>
+  </div>
   <script>
     const user = JSON.parse(localStorage.getItem('user') || 'null');
     const token = localStorage.getItem('token');
@@ -125,6 +179,30 @@
       return '<div class="item">' + esc(a.appointment_date) + ' at ' + esc(a.appointment_time) +
         '<br>Patient: ' + esc(a.patient_name) + ' · Doctor: ' + esc(a.doctor_name) +
         '<br>Status: ' + esc(a.status) + (a.description ? '<br>' + esc(a.description) : '') + '</div>';
+    }
+
+    function consultHtml(c) {
+      let buttons = '';
+      if (user.role === 'doctor' && c.status === 'pending') {
+        buttons = '<button class="small" onclick="acceptConsult(' + c.id + ')">Accept</button>';
+      } else if (user.role === 'doctor' && c.status === 'accepted') {
+        buttons = '<button class="small" onclick="completeConsult(' + c.id + ')">Mark as completed</button>';
+      }
+      return '<div class="item">' + esc(c.created_at) + ' · Status: <strong>' + esc(c.status) + '</strong>' +
+        '<br>Patient: ' + esc(c.patient_name) + ' · Requested by: ' + esc(c.requested_by_name) +
+        (c.doctor_name ? ' · Doctor: ' + esc(c.doctor_name) : '') +
+        '<br>' + esc(c.description) + '<br>' + buttons + '</div>';
+    }
+    function chwReqHtml(q) {
+      const button = (user.role === 'chw' && q.status === 'pending')
+        ? '<br><button class="small" onclick="respondChw(' + q.id + ')">Mark as responded</button>' : '';
+      return '<div class="item">' + esc(q.created_at) + ' · Status: <strong>' + esc(q.status) + '</strong>' +
+        '<br>Patient: ' + esc(q.patient_name) + (q.patient_location ? ' (' + esc(q.patient_location) + ')' : '') +
+        '<br>CHW: ' + (q.chw_name ? esc(q.chw_name) : 'not assigned yet') + button + '</div>';
+    }
+    function rxHtml(r) {
+      return '<div class="item">' + esc(r.prescription_date) + '<br>Patient: ' + esc(r.patient_name) +
+        ' · Doctor: ' + esc(r.doctor_name) + '<br>' + esc(r.instruction_dosage) + '</div>';
     }
 
     async function loadMySymptoms() {
@@ -203,6 +281,80 @@
       }
     }
 
+    async function loadMyConsults(targetId) {
+      const r = await api('consultations/mine');
+      if (r.ok) showList(targetId, r.data, consultHtml, 'No consultations yet.');
+    }
+    async function loadChwRequests(targetId) {
+      const r = await api('consultations/chw-requests');
+      if (r.ok) showList(targetId, r.data, chwReqHtml, 'No requests yet.');
+    }
+    async function loadMyRx() {
+      const r = await api('prescriptions/mine');
+      if (r.ok) showList('pRx', r.data, rxHtml, 'No prescriptions yet.');
+    }
+    async function patientRequestConsult() {
+      const r = await api('consultations', 'POST', { description: document.getElementById('pConsultDesc').value });
+      say('pConsultMsg', r.data.message);
+      if (r.ok) {
+        document.getElementById('pConsultDesc').value = '';
+        loadMyConsults('pConsults');
+      }
+    }
+    async function requestChw() {
+      const r = await api('consultations/chw-request', 'POST');
+      say('pChwMsg', r.data.message);
+      if (r.ok) loadChwRequests('pChwReqs');
+    }
+    function selectedPatient(targetId) {
+      const id = document.getElementById('sPatient').value;
+      if (!id) document.getElementById(targetId).innerHTML = '<p>Please choose a patient first.</p>';
+      return id;
+    }
+    async function viewRx() {
+      const id = selectedPatient('sRx');
+      if (!id) return;
+      const r = await api('prescriptions/patient/' + id);
+      if (r.ok) showList('sRx', r.data, rxHtml, 'No prescriptions for this patient.');
+    }
+    async function chwRequestConsult() {
+      const r = await api('consultations', 'POST', {
+        patient_id: document.getElementById('sPatient').value,
+        description: document.getElementById('cConsultDesc').value
+      });
+      say('cConsultMsg', r.data.message);
+      if (r.ok) {
+        document.getElementById('cConsultDesc').value = '';
+        loadMyConsults('cConsults');
+      }
+    }
+    async function respondChw(id) {
+      const r = await api('consultations/chw-request/' + id + '/respond', 'POST');
+      say('cChwMsg', r.data.message);
+      loadChwRequests('cChwReqs');
+    }
+    async function acceptConsult(id) {
+      const r = await api('consultations/' + id + '/accept', 'POST');
+      say('dConsultMsg', r.data.message);
+      loadMyConsults('dConsults');
+    }
+    async function completeConsult(id) {
+      const r = await api('consultations/' + id + '/complete', 'POST');
+      say('dConsultMsg', r.data.message);
+      loadMyConsults('dConsults');
+    }
+    async function writeRx() {
+      const r = await api('prescriptions', 'POST', {
+        patient_id: document.getElementById('sPatient').value,
+        instruction_dosage: document.getElementById('dRx').value
+      });
+      say('dRxMsg', r.data.message);
+      if (r.ok) {
+        document.getElementById('dRx').value = '';
+        viewRx();
+      }
+    }
+
     function init() {
       const names = { patient: 'Patient', chw: 'Community health worker', doctor: 'Doctor' };
       say('welcome', 'Welcome, ' + user.username);
@@ -212,13 +364,21 @@
         loadMySymptoms();
         loadDoctors();
         loadMyAppointments('pAppts');
+        loadMyConsults('pConsults');
+        loadChwRequests('pChwReqs');
+        loadMyRx();
       } else {
         show('staffView');
         loadStaff();
-        if (user.role === 'chw') show('chwOnly');
+        if (user.role === 'chw') {
+          show('chwOnly');
+          loadMyConsults('cConsults');
+          loadChwRequests('cChwReqs');
+        }
         if (user.role === 'doctor') {
           show('docOnly');
           loadMyAppointments('dAppts');
+          loadMyConsults('dConsults');
         }
       }
     }

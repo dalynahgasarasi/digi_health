@@ -4,6 +4,8 @@ const pool = require('./db');
 const { router: authRouter } = require('./auth');
 const symptomsRouter = require('./symptoms');
 const appointmentsRouter = require('./appointments');
+const consultationsRouter = require('./consultations');
+const prescriptionsRouter = require('./prescriptions');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,7 +15,8 @@ app.use('/api/symptoms', symptomsRouter);
 app.use('/api/appointments', appointmentsRouter);
 app.use(express.static('public'));
 app.use('/api/auth', authRouter);
-
+app.use('/api/consultations', consultationsRouter);
+app.use('/api/prescriptions', prescriptionsRouter);
 app.get('/api/db-test', async (req, res) => {
   try {
     const result = await pool.query('SELECT NOW() AS time');
