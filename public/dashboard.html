@@ -5,28 +5,224 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DigiHealth Dashboard</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 30px auto; padding: 0 16px; }
-    button { padding: 10px 16px; background: #0a7d5a; color: white; border: 0; cursor: pointer; }
+    body { font-family: Arial, sans-serif; max-width: 720px; margin: 20px auto; padding: 0 16px; }
+    header { display: flex; justify-content: space-between; align-items: center; }
+    section { border: 1px solid #ccc; border-radius: 8px; padding: 14px; margin: 16px 0; }
+    input, select, textarea, button { width: 100%; padding: 10px; margin: 6px 0; box-sizing: border-box; font-size: 16px; }
+    button { background: #0a7d5a; color: white; border: 0; cursor: pointer; border-radius: 4px; }
+    button.small { width: auto; padding: 8px 14px; }
+    .item { border-top: 1px solid #eee; padding: 8px 0; }
+    .urgent { color: #b00020; font-weight: bold; }
+    .msg { font-weight: bold; margin: 8px 0; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
-  <h1 id="welcome"></h1>
-  <p id="roleInfo"></p>
-  <button onclick="logout()">Log out</button>
+  <header>
+    <div>
+      <h1 id="welcome"></h1>
+      <p id="roleInfo"></p>
+    </div>
+    <button class="small" onclick="logout()">Log out</button>
+  </header>
+
+  <div id="patientView" class="hidden">
+    <section>
+      <h2>Log my symptoms</h2>
+      <textarea id="pSymptom" rows="3" placeholder="Describe how you feel"></textarea>
+      <select id="pUrgency">
+        <option value="normal">Normal</option>
+        <option value="urgent">Urgent</option>
+      </select>
+      <button onclick="patientSubmitSymptom()">Submit symptoms</button>
+      <div class="msg" id="pMsg"></div>
+    </section>
+    <section>
+      <h2>My symptom history</h2>
+      <div id="pHistory"></div>
+    </section>
+    <section>
+      <h2>Book an appointment</h2>
+      <select id="aDoctor"></select>
+      <input id="aDate" type="date">
+      <input id="aTime" type="time">
+      <input id="aDesc" placeholder="Reason (optional)">
+      <button onclick="bookAppointment()">Book appointment</button>
+      <div class="msg" id="aMsg"></div>
+    </section>
+    <section>
+      <h2>My appointments</h2>
+      <div id="pAppts"></div>
+    </section>
+  </div>
+
+  <!-- CHW AND DOCTOR -->
+  <div id="staffView" class="hidden">
+    <section>
+      <h2>Patients</h2>
+      <select id="sPatient"></select>
+      <button class="small" onclick="viewHistory()">View symptom history</button>
+      <div id="sHistory"></div>
+    </section>
+    <section id="chwOnly" class="hidden">
+      <h2>Log symptoms for the selected patient</h2>
+      <textarea id="cSymptom" rows="3" placeholder="Describe the patient's symptoms"></textarea>
+      <select id="cUrgency">
+        <option value="normal">Normal</option>
+        <option value="urgent">Urgent</option>
+      </select>
+      <button onclick="chwSubmitSymptom()">Submit symptoms</button>
+      <div class="msg" id="cMsg"></div>
+    </section>
+    <section>
+      <h2>Recent symptoms from all patients</h2>
+      <div id="sRecent"></div>
+    </section>
+    <section id="docOnly" class="hidden">
+      <h2>My appointments</h2>
+      <div id="dAppts"></div>
+    </section>
+  </div>
 
   <script>
     const user = JSON.parse(localStorage.getItem('user') || 'null');
-    if (!user) {
-      window.location.href = '/';
-    } else {
-      const names = { patient: 'Patient', chw: 'Community health worker', doctor: 'Doctor' };
-      document.getElementById('welcome').textContent = 'Welcome, ' + user.username;
-      document.getElementById('roleInfo').textContent = 'Signed in as: ' + names[user.role];
-    }
+    const token = localStorage.getItem('token');
+
     function logout() {
       localStorage.clear();
       window.location.href = '/';
     }
+    function esc(text) {
+      const d = document.createElement('div');
+      d.textContent = text == null ? '' : text;
+      return d.innerHTML;
+    }
+    function say(id, text) {
+      document.getElementById(id).textContent = text;
+    }
+    function show(id) {
+      document.getElementById(id).classList.remove('hidden');
+    }
+    async function api(path, method, body) {
+      const res = await fetch('/api/' + path, {
+        method: method || 'GET',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: body ? JSON.stringify(body) : undefined
+      });
+      const data = await res.json();
+      if (res.status === 401) logout();
+      return { ok: res.ok, data: data };
+    }
+    function showList(id, items, renderer, emptyText) {
+      document.getElementById(id).innerHTML = items.length ? items.map(renderer).join('') : '<p>' + emptyText + '</p>';
+    }
+    function symptomHtml(s) {
+      return '<div class="item"><span class="' + (s.urgency_level === 'urgent' ? 'urgent' : '') + '">' + esc(s.urgency_level) + '</span> · ' + esc(s.created_at) +
+        '<br>Patient: ' + esc(s.patient_name) + '<br>' + esc(s.description) +
+        '<br><small>Logged by ' + esc(s.logged_by_name) + '</small></div>';
+    }
+    function apptHtml(a) {
+      return '<div class="item">' + esc(a.appointment_date) + ' at ' + esc(a.appointment_time) +
+        '<br>Patient: ' + esc(a.patient_name) + ' · Doctor: ' + esc(a.doctor_name) +
+        '<br>Status: ' + esc(a.status) + (a.description ? '<br>' + esc(a.description) : '') + '</div>';
+    }
+
+    async function loadMySymptoms() {
+      const r = await api('symptoms/mine');
+      if (r.ok) showList('pHistory', r.data, symptomHtml, 'No symptoms logged yet.');
+    }
+    async function patientSubmitSymptom() {
+      const r = await api('symptoms', 'POST', {
+        description: document.getElementById('pSymptom').value,
+        urgency_level: document.getElementById('pUrgency').value
+      });
+      say('pMsg', r.data.message);
+      if (r.ok) {
+        document.getElementById('pSymptom').value = '';
+        loadMySymptoms();
+      }
+    }
+    async function loadDoctors() {
+      const r = await api('appointments/doctors');
+      if (!r.ok) return;
+      const select = document.getElementById('aDoctor');
+      select.innerHTML = '<option value="">Choose a doctor</option>' +
+        r.data.map(function (d) {
+          return '<option value="' + d.id + '">' + esc(d.username) + (d.specialisation ? ' (' + esc(d.specialisation) + ')' : '') + '</option>';
+        }).join('');
+    }
+    async function bookAppointment() {
+      const r = await api('appointments', 'POST', {
+        doctor_id: document.getElementById('aDoctor').value,
+        appointment_date: document.getElementById('aDate').value,
+        appointment_time: document.getElementById('aTime').value,
+        description: document.getElementById('aDesc').value
+      });
+      say('aMsg', r.data.message);
+      if (r.ok) loadMyAppointments('pAppts');
+    }
+    async function loadMyAppointments(targetId) {
+      const r = await api('appointments/mine');
+      if (r.ok) showList(targetId, r.data, apptHtml, 'No appointments yet.');
+    }
+
+    async function loadStaff() {
+      const p = await api('symptoms/patients');
+      if (p.ok) {
+        document.getElementById('sPatient').innerHTML = '<option value="">Choose a patient</option>' +
+          p.data.map(function (x) {
+            return '<option value="' + x.id + '">' + esc(x.username) + (x.location ? ' (' + esc(x.location) + ')' : '') + '</option>';
+          }).join('');
+      }
+      loadRecent();
+    }
+    async function loadRecent() {
+      const r = await api('symptoms/recent');
+      if (r.ok) showList('sRecent', r.data, symptomHtml, 'No symptoms logged yet.');
+    }
+    async function viewHistory() {
+      const id = document.getElementById('sPatient').value;
+      if (!id) {
+        document.getElementById('sHistory').innerHTML = '<p>Please choose a patient first.</p>';
+        return;
+      }
+      const r = await api('symptoms/patient/' + id);
+      if (r.ok) showList('sHistory', r.data, symptomHtml, 'No symptoms logged for this patient.');
+    }
+    async function chwSubmitSymptom() {
+      const r = await api('symptoms', 'POST', {
+        patient_id: document.getElementById('sPatient').value,
+        description: document.getElementById('cSymptom').value,
+        urgency_level: document.getElementById('cUrgency').value
+      });
+      say('cMsg', r.data.message);
+      if (r.ok) {
+        document.getElementById('cSymptom').value = '';
+        loadRecent();
+        viewHistory();
+      }
+    }
+
+    function init() {
+      const names = { patient: 'Patient', chw: 'Community health worker', doctor: 'Doctor' };
+      say('welcome', 'Welcome, ' + user.username);
+      say('roleInfo', 'Signed in as: ' + names[user.role]);
+      if (user.role === 'patient') {
+        show('patientView');
+        loadMySymptoms();
+        loadDoctors();
+        loadMyAppointments('pAppts');
+      } else {
+        show('staffView');
+        loadStaff();
+        if (user.role === 'chw') show('chwOnly');
+        if (user.role === 'doctor') {
+          show('docOnly');
+          loadMyAppointments('dAppts');
+        }
+      }
+    }
+    if (user && token) init(); else logout();
   </script>
 </body>
 </html>

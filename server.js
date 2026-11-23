@@ -2,11 +2,15 @@ require('dotenv').config();
 const express = require('express');
 const pool = require('./db');
 const { router: authRouter } = require('./auth');
+const symptomsRouter = require('./symptoms');
+const appointmentsRouter = require('./appointments');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+app.use('/api/symptoms', symptomsRouter);
+app.use('/api/appointments', appointmentsRouter);
 app.use(express.static('public'));
 app.use('/api/auth', authRouter);
 
