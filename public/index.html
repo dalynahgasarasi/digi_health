@@ -1,18 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="stylesheet" href="/style.css">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DigiHealth</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 420px; margin: 30px auto; padding: 0 16px; }
-    input, select, button { width: 100%; padding: 10px; margin: 6px 0; box-sizing: border-box; }
-    button { background: #0a7d5a; color: white; border: 0; cursor: pointer; }
-    .msg { margin: 10px 0; font-weight: bold; }
-    .hidden { display: none; }
-  </style>
 </head>
-<body>
+<body class="narrow">
   <h1>DigiHealth</h1>
   <div class="msg" id="msg"></div>
 
@@ -92,6 +86,16 @@
       localStorage.setItem('user', JSON.stringify(data.user));
       window.location.href = '/dashboard.html';
     }
+        
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      const id = e.target.id;
+      if (id === 'lPhone' || id === 'lPass') {
+        login();
+      } else if (['sName', 'sPhone', 'sPass', 'sLocation', 'sSpec'].indexOf(id) !== -1) {
+        signup();
+      }
+    });
   </script>
 </body>
 </html>
