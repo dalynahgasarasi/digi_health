@@ -4,18 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DigiHealth Dashboard</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 720px; margin: 20px auto; padding: 0 16px; }
-    header { display: flex; justify-content: space-between; align-items: center; }
-    section { border: 1px solid #ccc; border-radius: 8px; padding: 14px; margin: 16px 0; }
-    input, select, textarea, button { width: 100%; padding: 10px; margin: 6px 0; box-sizing: border-box; font-size: 16px; }
-    button { background: #0a7d5a; color: white; border: 0; cursor: pointer; border-radius: 4px; }
-    button.small { width: auto; padding: 8px 14px; }
-    .item { border-top: 1px solid #eee; padding: 8px 0; }
-    .urgent { color: #b00020; font-weight: bold; }
-    .msg { font-weight: bold; margin: 8px 0; }
-    .hidden { display: none; }
-  </style>
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <header>
@@ -29,6 +18,7 @@
   <div id="patientView" class="hidden">
     <section>
       <h2>Log my symptoms</h2>
+      <div class="emoji-row" data-target="pSymptom"></div>
       <textarea id="pSymptom" rows="3" placeholder="Describe how you feel"></textarea>
       <select id="pUrgency">
         <option value="normal">Normal</option>
@@ -90,6 +80,7 @@
     <div id="chwOnly" class="hidden">
       <section>
         <h2>Log symptoms for the selected patient</h2>
+        <div class="emoji-row" data-target="cSymptom"></div>
         <textarea id="cSymptom" rows="3" placeholder="Describe the patient's symptoms"></textarea>
         <select id="cUrgency">
           <option value="normal">Normal</option>
@@ -382,7 +373,29 @@
         }
       }
     }
-    if (user && token) init(); else logout();
+    const SYMPTOM_EMOJIS = [
+      ['🤒', 'Fever'], ['🤕', 'Headache'], ['🤢', 'Nausea'], ['🤮', 'Vomiting'],
+      ['😷', 'Cough'], ['😮‍💨', 'Difficulty breathing'], ['😫', 'Body pain'], ['🥶', 'Chills']
+    ];
+    function addSymptom(targetId, label) {
+      const box = document.getElementById(targetId);
+      box.value = box.value.trim() ? box.value.trim() + ', ' + label : label;
+    }
+    function buildEmojiPickers() {
+      document.querySelectorAll('.emoji-row').forEach(function (row) {
+        const target = row.getAttribute('data-target');
+        row.innerHTML = SYMPTOM_EMOJIS.map(function (e) {
+          return '<button type="button" class="emoji-btn" onclick="addSymptom(\'' + target + '\', \'' + e[1] + '\')"><span>' + e[0] + '</span>' + e[1] + '</button>';
+        }).join('');
+      });
+    }
+    buildEmojiPickers();
+    if (user && token) init(); else logout(); 
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && e.target.id === 'aDesc') {
+        bookAppointment();
+      }
+    });
   </script>
 </body>
 </html>
