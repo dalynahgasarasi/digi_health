@@ -1,13 +1,13 @@
 :root {
-    --primary: #5b43a8;
-    --primary-dark: #48358a;
-    --bg:#f5f2fb;
+    --primary: #115287;
+    --primary-dark: #073c69;
+    --bg: #eef5fb;
     --card: #ffffff;
-    --chip: #e8e1f7;
-    --chip-hover: #d9cff2;
-    --text: #251c3d;
-    --muted: #5a4f73;
-    --line: #d6cceb;
+    --chip: #dbe8f5;
+    --chip-hover: #c8dcf0;
+    --text: #14283d;
+    --muted: #304a67;
+    --line: #cfdcea;
     --danger: #b00020;
 }
 
@@ -20,7 +20,7 @@ body {
     font-family: "Segoe UI", Arial, sans-serif;
     background-color: var(--bg);
     color: var(--text);
-    max-width: 760px;
+    max-width: 100px;
     padding: 16px;
     line-height: 1.5;
 }
@@ -57,7 +57,7 @@ section {
     border-radius: 12px;
     border: 1px solid var(--line);
     margin: 14px 0;
-    box-shadow: 0 1px 3px rgba(37, 28, 61, 0.06);
+    box-shadow: 0 1px 3px rgba(20, 40, 61, 0.06);
 }
 input, select, textarea {
     font-family: inherit;
@@ -164,3 +164,120 @@ button.small {
         grid-template-columns: repeat(2, 1fr);
     }
 }
+
+.off { display: none !important; }
+
+.topwrap {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
+  padding-top: 4px;
+}
+.top-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.top-actions button.small { margin: 0; }
+
+.lang { display: flex; }
+.lang-btn {
+  width: auto;
+  margin: 0;
+  padding: 6px 12px;
+  background: var(--chip);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 0;
+}
+.lang-btn:first-child { border-radius: 8px 0 0 8px; }
+.lang-btn:last-child { border-radius: 0 8px 8px 0; }
+.lang-btn:hover { background: var(--chip-hover); }
+.lang-btn.active, .lang-btn.active:hover { background: var(--primary); color: #fff; }
+
+.emergency {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 12px;
+  background: var(--danger);
+  color: #fff;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 0.9rem;
+  border-radius: 8px;
+}
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.tab-btn {
+  width: auto;
+  flex: 0 0 auto;
+  margin: 0;
+  white-space: nowrap;
+  background: var(--chip);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+.tab-btn:hover { background: var(--chip-hover); }
+.tab-btn.active, .tab-btn.active:hover { background: var(--primary); color: #fff; }
+
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+.home-grid .emoji-btn { font-size: 1rem; padding: 18px 8px; }
+.home-grid .emoji-btn span { font-size: 2rem; }
+body {
+  display: block;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 16px 3cm;
+}
+@media (max-width: 900px) {
+  body { padding: 10px 1cm; }
+}
+@media (max-width: 600px) {
+  body { padding: 10px; }
+}
+/* ===== Login page ===== */
+body.narrow {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--chip) 0%, var(--bg) 45%);
+}
+.hero { text-align: center; margin: 8px 0 18px; }
+.logo { font-size: 3rem; line-height: 1; }
+.hero h1 { font-size: 2.2rem; margin-top: 6px; }
+.tagline { color: var(--muted); font-size: 1.05rem; margin: 6px 0 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.pill {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+.auth-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+.auth-card h2 { text-align: center; }
+.auth-card button { margin-top: 10px; }
+button { transition: background 0.2s, transform 0.1s; }
+button:active { transform: scale(0.98); }
+@keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.hero, .auth-card { animation: rise 0.5s ease both; }
+@media (prefers-reduced-motion: reduce) { .hero, .auth-card { animation: none; } }
