@@ -7,16 +7,34 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
+  <div class="topwrap">
   <header>
     <div>
       <h1 id="welcome"></h1>
       <p id="roleInfo"></p>
     </div>
-    <button class="small" onclick="logout()">Log out</button>
+    <div class="top-actions">
+        <div class="lang">
+          <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+          <button class="lang-btn" data-lang="rw" onclick="setLang('rw')">RW</button>
+        </div>
+        <button class="small" onclick="toggleHelp()"><span>❓</span> Help</button>
+        <a class="emergency" href="tel:112"><span>🚑</span> Emergency 112</a>
+        <button class="small" onclick="logout()">Log out</button>
+      </div>
   </header>
+      <nav id="tabs" class="tabs"></nav>
+  </div>
+
+  <section id="helpBox" class="hidden">
+  </section>
+      <button class="small" onclick="toggleHelp()"><span>❓</span> Help</button>
+      <a class="emergency" href="tel:112"><span>🚑</span> Emergency 112</a>
+      <button class="small" onclick="logout()">Log out</button>
+    </div>
 
   <div id="patientView" class="hidden">
-    <section>
+    <section data-tab="home">
       <h2>Log my symptoms</h2>
       <div class="emoji-row" data-target="pSymptom"></div>
       <textarea id="pSymptom" rows="3" placeholder="Describe how you feel"></textarea>
@@ -27,11 +45,11 @@
       <button onclick="patientSubmitSymptom()">Submit symptoms</button>
       <div class="msg" id="pMsg"></div>
     </section>
-    <section>
+    <section data-tab="home">
       <h2>My symptom history</h2>
       <div id="pHistory"></div>
     </section>
-    <section>
+    <section data-tab="appointments">
       <h2>Book an appointment</h2>
       <select id="aDoctor"></select>
       <input id="aDate" type="date">
@@ -40,27 +58,27 @@
       <button onclick="bookAppointment()">Book appointment</button>
       <div class="msg" id="aMsg"></div>
     </section>
-    <section>
+    <section data-tab="appointments">
       <h2>My appointments</h2>
       <div id="pAppts"></div>
     </section>
-        <section>
+        <section data-tab="consultations">
       <h2>Request a remote consultation</h2>
       <textarea id="pConsultDesc" rows="3" placeholder="Why do you need a consultation?"></textarea>
       <button onclick="patientRequestConsult()">Request consultation</button>
       <div class="msg" id="pConsultMsg"></div>
     </section>
-    <section>
+    <section data-tab="consultations">
       <h2>My consultations</h2>
       <div id="pConsults"></div>
     </section>
-    <section>
+    <section data-tab="consultations">
       <h2>Talk to my nearest CHW</h2>
       <button onclick="requestChw()">Ask my nearest community health worker</button>
       <div class="msg" id="pChwMsg"></div>
       <div id="pChwReqs"></div>
     </section>
-    <section>
+    <section data-tab="prescriptions">
       <h2>My prescriptions</h2>
       <div id="pRx"></div>
     </section>
@@ -68,7 +86,7 @@
 
 
   <div id="staffView" class="hidden">
-    <section>
+    <section data-tab="home consultations prescriptions">
       <h2>Patients</h2>
       <select id="sPatient"></select>
       <button class="small" onclick="viewHistory()">View symptom history</button>
@@ -78,7 +96,7 @@
     </section>
 
     <div id="chwOnly" class="hidden">
-      <section>
+      <section data-tab="home">
         <h2>Log symptoms for the selected patient</h2>
         <div class="emoji-row" data-target="cSymptom"></div>
         <textarea id="cSymptom" rows="3" placeholder="Describe the patient's symptoms"></textarea>
@@ -89,13 +107,13 @@
         <button onclick="chwSubmitSymptom()">Submit symptoms</button>
         <div class="msg" id="cMsg"></div>
       </section>
-      <section>
+      <section data-tab="consultations">
         <h2>Request a consultation for the selected patient</h2>
         <textarea id="cConsultDesc" rows="3" placeholder="Why does this patient need a doctor?"></textarea>
         <button onclick="chwRequestConsult()">Request consultation</button>
         <div class="msg" id="cConsultMsg"></div>
       </section>
-      <section>
+      <section data-tab="consultations">
         <h2>Consultations I requested</h2>
         <div id="cConsults"></div>
       </section>
@@ -106,22 +124,22 @@
       </section>
     </div>
 
-    <section>
+    <section data-tab="home">
       <h2>Recent symptoms from all patients</h2>
       <div id="sRecent"></div>
     </section>
 
     <div id="docOnly" class="hidden">
-      <section>
+      <section data-tab="appointments">
         <h2>My appointments</h2>
         <div id="dAppts"></div>
       </section>
-      <section>
+      <section data-tab="consultations">
         <h2>Consultation requests</h2>
         <div class="msg" id="dConsultMsg"></div>
         <div id="dConsults"></div>
       </section>
-      <section>
+      <section data-tab="prescriptions">
         <h2>Write a prescription for the selected patient</h2>
         <textarea id="dRx" rows="3" placeholder="Medicine, dose and instructions"></textarea>
         <button onclick="writeRx()">Save prescription</button>
@@ -129,11 +147,14 @@
       </section>
     </div>
   </div>
+  <script src="/i18n.js"></script>
   <script>
     const user = JSON.parse(localStorage.getItem('user') || 'null');
     const token = localStorage.getItem('token');
 
     function logout() {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
       localStorage.clear();
       window.location.href = '/';
     }
@@ -396,6 +417,38 @@
         bookAppointment();
       }
     });
+  </script>
+  <script>
+    const ICONS = { home: '🏠', patients: '👥', symptoms: '🤒', appointments: '📅', consultations: '💬', prescriptions: '💊' };
+    const LABELS = { home: 'Home', patients: 'Patients', symptoms: 'Symptoms', appointments: 'Appointments', consultations: 'Consultations', prescriptions: 'Prescriptions' };
+    const TABS = {
+      patient: ['home', 'appointments', 'consultations', 'prescriptions'],
+      chw: ['home', 'consultations'],
+      doctor: ['home', 'appointments', 'consultations', 'prescriptions']
+    };
+    function currentTab() {
+      const h = location.hash.slice(1);
+      return TABS[user.role].indexOf(h) !== -1 ? h : 'home';
+    }
+    function openTab(name) { location.hash = name; showTab(); }
+    function showTab() {
+      const name = currentTab();
+      document.querySelectorAll('[data-tab]').forEach(function (el) {
+        el.classList.toggle('off', el.getAttribute('data-tab').split(' ').indexOf(name) === -1);
+      });
+      document.querySelectorAll('.tab-btn').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-go') === name);
+      });
+      window.scrollTo(0, 0);
+    }
+    function toggleHelp() { document.getElementById('helpBox').classList.toggle('hidden'); }
+    function buildTabs() {
+      document.getElementById('tabs').innerHTML = TABS[user.role].map(function (n) {
+        return '<button class="tab-btn" data-go="' + n + '" onclick="openTab(\'' + n + '\')"><span>' + ICONS[n] + '</span> ' + LABELS[n] + '</button>';
+      }).join('');
+    }
+    window.addEventListener('hashchange', function () { if (user) showTab(); });
+    if (user && token) { buildTabs(); showTab(); }
   </script>
 </body>
 </html>
